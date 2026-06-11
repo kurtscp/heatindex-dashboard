@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% block title %}HeatWatch - Predictor{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1>Danger Level Predictor</h1>
+        <p>Machine learning-backed forecasting for Metro Manila heat danger</p>
+    </div>
+
+    <!-- Predictor Form -->
+    <div class="predictor-form">
+        <h3>Predict Danger Level</h3>
+        <div class="predictor-controls">
+            <div class="form-group">
+                <label for="predDay">Day</label>
+                <select id="predDay">
+                    {% for d in range(1, 32) %}
+                    <option value="{{ d }}">{{ d }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="predMonth">Month</label>
+                <select id="predMonth">
+                    <option value="1">January</option>
+                    <option value="2">February</option>
+                    <option value="3">March</option>
+                    <option value="4" selected>April</option>
+                    <option value="5">May</option>
+                    <option value="6">June</option>
+                    <option value="7">July</option>
+                    <option value="8">August</option>
+                    <option value="9">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="predYear">Year</label>
+                <select id="predYear">
+                    <option value="2026">2026</option>
+                    <option value="2027" selected>2027</option>
+                    <option value="2028">2028</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="predEnso">ENSO Condition</label>
+                <select id="predEnso">
+                    <option value="Neutral" selected>Neutral</option>
+                    <option value="El Nino">El Ni&ntilde;o</option>
+                    <option value="La Nina">La Ni&ntilde;a</option>
+                </select>
+            </div>
+            <button class="predict-btn" id="predictBtn" type="button">Predict</button>
+        </div>
+
+        <!-- Prediction Result -->
+        <div class="prediction-result" id="predictionResult">
+            <div class="prediction-grid">
+                <div class="gauge-container">
+                    <div id="gaugeChart" style="width:200px; height:180px;"></div>
+                </div>
+                <div class="prediction-details">
+                    <h4 id="predCategory">&mdash;</h4>
+                    <p class="pred-stat" id="predHI">Predicted Heat Index: &mdash;</p>
+                    <p class="pred-stat" id="predProb">Confidence: &mdash;</p>
+                    <div class="pred-advisory" id="predAdvisory">&mdash;</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forecast Trend Chart -->
+    <div class="chart-container" style="margin-bottom:1.5rem;">
+        <div class="chart-header">
+            <span class="chart-title">Heat Index Forecast Trend (2015-2028)</span>
+        </div>
+        <div id="chartForecast" style="width:100%; height:380px;"></div>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="page-header" style="margin-top:0.5rem;">
+        <h3 style="font-size:0.95rem; font-weight:600;">Data-Backed Recommendations</h3>
+    </div>
+    <div class="recommendations-grid">
+        {% for rec in recommendations %}
+        <div class="rec-card">
+            <div class="rec-title">{{ rec.title }}</div>
+            <div class="rec-text">{{ rec.text }}</div>
+            <span class="rec-stat">{{ rec.stat }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var plotlyLayout = {
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { family: 'Inter, sans-serif', color: '#8b949e', size: 12 },
+        margin: { t: 30, r: 30, b: 70, l: 60 },
+        xaxis: { gridcolor: '#21262d', linecolor: '#30363d', zerolinecolor: '#30363d' },
+        yaxis: { gridcolor: '#21262d', linecolor: '#30363d', zerolinecolor: '#30363d' },
+        hoverlabel: { bgcolor: '#1c2128', bordercolor: '#30363d', font: { color: '#e6edf3', family: 'Inter, sans-serif' } },
+    };
+    var plotlyConfig = { responsive: true, displayModeBar: false };
+
+    // Forecast Chart
+    var forecast = {{ forecast | safe }};
+
+    if (forecast) {
+        var histEnd = forecast.historical_end_year;
+
+        var histYears = forecast.years.filter(function(y) { return y <= histEnd; });
+        var histValues = histYears.map(function(y) { return forecast.values[forecast.years.indexOf(y)]; });
+
+        var foreYears = forecast.years.filter(function(y) { return y >= histEnd; });
+        var foreIdx = foreYears.map(function(y) { return forecast.years.indexOf(y); });
+        var foreValues = foreIdx.map(function(i) { return forecast.values[i]; });
+        var foreUpper = foreIdx.map(function(i) { return forecast.upper[i]; });
+        var foreLower = foreIdx.map(function(i) { return forecast.lower[i]; });
+
+        var annotations = [];
+        if (forecast.crossing_year) {
+            annotations.push({
+                x: forecast.crossing_year, y: 42,
+                text: 'Projected 42\u00b0C avg: ' + forecast.crossing_year,
+                showarrow: true, arrowhead: 2, arrowcolor: '#da3633',
+                ax: 0, ay: -40, font: { size: 11, color: '#da3633' },
+            });
+        }
+
+        Plotly.newPlot('chartForecast', [
+            {
+                x: foreYears, y: foreUpper,
+                type: 'scatter', mode: 'lines', name: 'Upper CI',
+                line: { width: 0 }, showlegend: false, hoverinfo: 'skip',
+            },
+            {
+                x: foreYears, y: foreLower,
+                type: 'scatter', mode: 'lines', name: 'Lower CI',
+                line: { width: 0 }, fill: 'tonexty', fillcolor: 'rgba(210, 153, 34, 0.15)',
+                showlegend: false, hoverinfo: 'skip',
+            },
+            {
+                x: histYears, y: histValues,
+                type: 'scatter', mode: 'lines+markers', name: 'Historical Trend',
+                line: { color: '#f85149', width: 2.5 }, marker: { size: 5 },
+                hovertemplate: '<b>%{x}</b><br>Avg HI: %{y:.1f}\u00b0C<extra></extra>',
+            },
+            {
+                x: foreYears, y: foreValues,
+                type: 'scatter', mode: 'lines+markers', name: 'Forecast',
+                line: { color: '#d29922', width: 2.5, dash: 'dash' }, marker: { size: 5 },
+                hovertemplate: '<b>%{x}</b><br>Projected: %{y:.1f}\u00b0C<extra></extra>',
+            },
+            {
+                x: forecast.years, y: Array(forecast.years.length).fill(42),
+                type: 'scatter', mode: 'lines', name: 'Danger (42\u00b0C)',
+                line: { color: '#da3633', width: 1.5, dash: 'dash' }, hoverinfo: 'skip',
+            }
+        ], Object.assign({}, plotlyLayout, {
+            showlegend: true,
+            legend: { orientation: 'h', y: -0.25, x: 0.5, xanchor: 'center', font: { size: 11 } },
+            xaxis: Object.assign({}, plotlyLayout.xaxis, { dtick: 1, title: { text: 'Year', font: { size: 11 } } }),
+            yaxis: Object.assign({}, plotlyLayout.yaxis, { title: { text: 'Avg Heat Index (\u00b0C)', font: { size: 11 } } }),
+            annotations: annotations,
+        }), plotlyConfig);
+    }
+
+    // Predictor Button
+    var categoryColors = {
+        'Normal': '#58a6ff',
+        'Caution': '#d29922',
+        'Extreme Caution': '#e3872d',
+        'Danger': '#da3633',
+        'Extreme Danger': '#9e1c1c',
+    };
+
+    document.getElementById('predictBtn').addEventListener('click', function() {
+        var btn = this;
+        var day = parseInt(document.getElementById('predDay').value);
+        var month = parseInt(document.getElementById('predMonth').value);
+        var year = parseInt(document.getElementById('predYear').value);
+        var enso = document.getElementById('predEnso').value;
+
+        btn.textContent = '...';
+        btn.disabled = true;
+
+        fetch('/api/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ day: day, month: month, year: year, enso_condition: enso }),
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(result) {
+            btn.textContent = 'Predict';
+            btn.disabled = false;
+
+            if (result.error) { alert(result.error); return; }
+
+            document.getElementById('predictionResult').classList.add('active');
+
+            var color = categoryColors[result.category] || '#8b949e';
+            document.getElementById('predCategory').textContent = result.category;
+            document.getElementById('predCategory').style.color = color;
+            document.getElementById('predHI').textContent = 'Predicted Heat Index: ' + result.predicted_hi + '\u00b0C';
+            document.getElementById('predProb').textContent = 'Confidence: ' + result.probability + '%';
+            document.getElementById('predAdvisory').textContent = result.advisory;
+            document.getElementById('predAdvisory').style.borderLeftColor = color;
+
+            Plotly.newPlot('gaugeChart', [{
+                type: 'indicator', mode: 'gauge+number',
+                value: result.predicted_hi,
+                number: { suffix: '\u00b0C', font: { size: 24, color: '#e6edf3' } },
+                gauge: {
+                    axis: { range: [20, 55], tickcolor: '#8b949e', dtick: 5 },
+                    bar: { color: color },
+                    bgcolor: '#161b22', bordercolor: '#30363d',
+                    steps: [
+                        { range: [20, 27], color: '#1a3a4a' },
+                        { range: [27, 33], color: '#3d2e10' },
+                        { range: [33, 42], color: '#4a2a10' },
+                        { range: [42, 52], color: '#4a1414' },
+                        { range: [52, 55], color: '#5c0d0d' },
+                    ],
+                    threshold: { line: { color: '#e6edf3', width: 2 }, thickness: 0.75, value: result.predicted_hi },
+                },
+            }], {
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: { family: 'Inter, sans-serif', color: '#8b949e' },
+                margin: { t: 20, r: 20, b: 0, l: 20 },
+                width: 200, height: 170,
+            }, { responsive: true, displayModeBar: false });
+        })
+        .catch(function(err) {
+            btn.textContent = 'Predict';
+            btn.disabled = false;
+            alert('Error: ' + err.message);
+        });
+    });
+});
+</script>
+{% endblock %}

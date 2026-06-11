@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% block title %}HeatWatch - Historical Trends{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1>Historical Trends</h1>
+        <p>Decade-long analysis of Metro Manila's heat index patterns and trends</p>
+    </div>
+
+    <!-- Chart 1: Annual Average Heat Index Trend (full width) -->
+    <div class="charts-row" style="grid-template-columns:1fr;">
+        <div class="chart-container full-width">
+            <div class="chart-header">
+                <span class="chart-title">Annual Average Heat Index Trend</span>
+            </div>
+            <div id="chartAnnualTrend" style="width:100%; height:350px;"></div>
+        </div>
+    </div>
+
+    <!-- Charts Row: Dot Plot + HI Gap -->
+    <div class="charts-row">
+        <div class="chart-container">
+            <div class="chart-header">
+                <span class="chart-title">Earliest Danger Day Per Year</span>
+            </div>
+            <div id="chartEarliestDanger" style="width:100%; height:380px;"></div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-header">
+                <span class="chart-title">Temperature vs Heat Index Gap</span>
+            </div>
+            <div id="chartHIGap" style="width:100%; height:380px;"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var plotlyLayout = {
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { family: 'Inter, sans-serif', color: '#8b949e', size: 12 },
+        margin: { t: 30, r: 30, b: 70, l: 60 },
+        xaxis: { gridcolor: '#21262d', linecolor: '#30363d', zerolinecolor: '#30363d' },
+        yaxis: { gridcolor: '#21262d', linecolor: '#30363d', zerolinecolor: '#30363d' },
+        hoverlabel: { bgcolor: '#1c2128', bordercolor: '#30363d', font: { color: '#e6edf3', family: 'Inter, sans-serif' } },
+    };
+    var plotlyConfig = { responsive: true, displayModeBar: false };
+
+    // Chart 1: Annual Average HI Trend
+    var annualTrend = {{ annual_trend | safe }};
+
+    Plotly.newPlot('chartAnnualTrend', [
+        {
+            x: annualTrend.years, y: annualTrend.avg_hi,
+            type: 'scatter', mode: 'lines+markers', name: 'Avg Heat Index',
+            line: { color: '#f85149', width: 2.5 }, marker: { size: 6 },
+            hovertemplate: '<b>%{x}</b><br>Avg HI: %{y:.1f}\u00b0C<extra></extra>',
+        },
+        {
+            x: annualTrend.years, y: annualTrend.trend,
+            type: 'scatter', mode: 'lines', name: 'Linear Trend',
+            line: { color: '#d29922', width: 2, dash: 'dot' },
+            fill: 'tozeroy', fillcolor: 'rgba(210, 153, 34, 0.1)',
+            customdata: annualTrend.years.map(function() { return [annualTrend.slope, annualTrend.r_squared]; }),
+            hovertemplate: '<b>Linear Trend</b><br>Slope: +%{customdata[0]}\u00b0C/year<br>R\u00b2: %{customdata[1]}<extra></extra>',
+        }
+    ], Object.assign({}, plotlyLayout, {
+        showlegend: true,
+        legend: { orientation: 'h', y: -0.25, x: 0.5, xanchor: 'center', font: { size: 11 } },
+        xaxis: Object.assign({}, plotlyLayout.xaxis, { dtick: 1, title: { text: 'Year', font: { size: 11 } } }),
+        yaxis: Object.assign({}, plotlyLayout.yaxis, { title: { text: 'Avg Heat Index (\u00b0C)', font: { size: 11 } } }),
+    }), plotlyConfig);
+
+    // Chart 2: Earliest Danger Day Dot Plot
+    var earliestDanger = {{ earliest_danger | safe }};
+    var hasDanger = earliestDanger.filter(function(d) { return d.has_danger; });
+    var noDanger = earliestDanger.filter(function(d) { return !d.has_danger; });
+
+    var monthTicks = [1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];
+    var monthLabels = ['Jan 1', 'Feb 1', 'Mar 1', 'Apr 1', 'May 1', 'Jun 1',
+                       'Jul 1', 'Aug 1', 'Sep 1', 'Oct 1', 'Nov 1', 'Dec 1'];
+
+    var dotTraces = [{
+        x: hasDanger.map(function(d) { return d.year; }),
+        y: hasDanger.map(function(d) { return d.day_of_year; }),
+        text: hasDanger.map(function(d) { return d.label; }),
+        type: 'scatter', mode: 'lines+markers', name: 'Earliest Danger Day',
+        line: { color: '#f85149', width: 2 },
+        marker: { size: 9, color: '#f85149', line: { color: '#0d1117', width: 2 } },
+        hovertemplate: '<b>%{x}</b><br>First Danger Day: %{text}<extra></extra>',
+    }];
+
+    if (noDanger.length > 0) {
+        dotTraces.push({
+            x: noDanger.map(function(d) { return d.year; }),
+            y: noDanger.map(function(d) { return 180; }),
+            type: 'scatter', mode: 'markers', name: 'No Danger Days',
+            marker: { size: 9, color: 'rgba(0,0,0,0)', line: { color: '#8b949e', width: 2 } },
+            hovertemplate: '<b>%{x}</b><br>No Danger-level days recorded<extra></extra>',
+        });
+    }
+
+    Plotly.newPlot('chartEarliestDanger', dotTraces, Object.assign({}, plotlyLayout, {
+        showlegend: false,
+        xaxis: Object.assign({}, plotlyLayout.xaxis, { dtick: 1, title: { text: 'Year', font: { size: 11 } } }),
+        yaxis: Object.assign({}, plotlyLayout.yaxis, {
+            title: { text: 'Calendar Day', font: { size: 11 } },
+            tickvals: monthTicks, ticktext: monthLabels, autorange: 'reversed',
+        }),
+    }), plotlyConfig);
+
+    // Chart 3: Temperature vs Heat Index Gap
+    var hiGap = {{ hi_gap | safe }};
+
+    Plotly.newPlot('chartHIGap', [
+        {
+            x: hiGap.years, y: hiGap.avg_temp,
+            type: 'scatter', mode: 'lines+markers', name: 'Avg Temperature',
+            line: { color: '#58a6ff', width: 2 }, marker: { size: 5 },
+            hovertemplate: '<b>%{x}</b><br>Avg Temp: %{y:.1f}\u00b0C<extra></extra>',
+        },
+        {
+            x: hiGap.years, y: hiGap.avg_hi,
+            type: 'scatter', mode: 'lines+markers', name: 'Avg Heat Index',
+            line: { color: '#f85149', width: 2 }, marker: { size: 5 },
+            fill: 'tonexty', fillcolor: 'rgba(248, 81, 73, 0.1)',
+            customdata: hiGap.avg_gap,
+            hovertemplate: '<b>%{x}</b><br>Avg HI: %{y:.1f}\u00b0C<br>Gap: %{customdata:.1f}\u00b0C<extra></extra>',
+        }
+    ], Object.assign({}, plotlyLayout, {
+        showlegend: true,
+        legend: { orientation: 'h', y: -0.25, x: 0.5, xanchor: 'center', font: { size: 11 } },
+        xaxis: Object.assign({}, plotlyLayout.xaxis, { dtick: 1, title: { text: 'Year', font: { size: 11 } } }),
+        yaxis: Object.assign({}, plotlyLayout.yaxis, { title: { text: 'Temperature (\u00b0C)', font: { size: 11 } } }),
+    }), plotlyConfig);
+});
+</script>
+{% endblock %}

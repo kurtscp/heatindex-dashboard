@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% block title %}HeatWatch - Danger Calendar{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1>Danger Calendar</h1>
+        <p>Visual overview of danger-level heat events across the full dataset period</p>
+    </div>
+
+    <!-- Heatmap Calendar -->
+    <div class="chart-container" style="margin-bottom:1.5rem;">
+        <div class="chart-header">
+            <span class="chart-title">Heat Index Danger Heatmap</span>
+        </div>
+        <div class="calendar-heatmap" id="calendarHeatmap"></div>
+    </div>
+
+    <!-- Top 5 Dangerous Weeks -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <span class="chart-title">Top 5 Historically Dangerous Weeks</span>
+        </div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Week Range</th>
+                    <th>Avg Heat Index</th>
+                    <th>Danger Probability</th>
+                    <th>PAGASA Category</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for week in top_weeks %}
+                <tr>
+                    <td>{{ week.rank }}</td>
+                    <td>{{ week.week_range }}</td>
+                    <td>{{ week.avg_hi }}&deg;C</td>
+                    <td>{{ week.danger_probability }}%</td>
+                    <td>
+                        {% set cat_class = week.category | lower | replace(' ', '-') %}
+                        <span class="category-badge {{ cat_class }}">{{ week.category }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarData = {{ calendar_data | safe }};
+    var monthNames = {{ month_names | safe }};
+
+    var container = document.getElementById('calendarHeatmap');
+
+    var table = document.createElement('table');
+    table.className = 'heatmap-table';
+
+    var thead = document.createElement('thead');
+    var headerRow = document.createElement('tr');
+    headerRow.innerHTML = '<th style="width: 60px; text-align: left; padding-left: 0.5rem;">Year</th>';
+    monthNames.forEach(function(m) {
+        headerRow.innerHTML += '<th>' + m + '</th>';
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    var catLabels = { '-1': '\u2014', '0': 'N', '1': 'C', '2': 'EC', '3': 'D', '4': 'ED' };
+
+    var tbody = document.createElement('tbody');
+    calendarData.forEach(function(row) {
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td class="heatmap-year">' + row.year + '</td>';
+
+        monthNames.forEach(function(m) {
+            var cell = row[m];
+            var td = document.createElement('td');
+            td.className = 'heatmap-cell severity-' + cell.severity;
+            td.textContent = catLabels[String(cell.severity)] || '\u2014';
+            td.title = m + ' ' + row.year + '\nCategory: ' + cell.category + '\nAvg HI: ' + (cell.avg_hi || '--') + '\u00b0C\nPeak HI: ' + cell.peak_hi + '\u00b0C\nDanger Days: ' + cell.danger_days;
+            tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    container.appendChild(table);
+
+    var legend = document.createElement('div');
+    legend.style.cssText = 'display:flex; gap:1rem; margin-top:1rem; font-size:0.75rem; color:#8b949e; flex-wrap:wrap; justify-content: center;';
+    var items = [
+        { label: 'Normal', cls: 'severity-0' },
+        { label: 'Caution', cls: 'severity-1' },
+        { label: 'Extreme Caution', cls: 'severity-2' },
+        { label: 'Danger', cls: 'severity-3' },
+        { label: 'Extreme Danger', cls: 'severity-4' },
+        { label: 'No Data', cls: 'severity--1' },
+    ];
+    items.forEach(function(item) {
+        var span = document.createElement('span');
+        span.innerHTML = '<span class="heatmap-cell ' + item.cls + '" style="display:inline-block;width:18px;height:18px;line-height:18px;font-size:0.6rem;vertical-align:middle;margin-right:4px;"></span>' + item.label;
+        legend.appendChild(span);
+    });
+    container.appendChild(legend);
+});
+</script>
+{% endblock %}

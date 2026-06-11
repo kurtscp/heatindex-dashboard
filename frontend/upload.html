@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% block title %}HeatWatch - Upload Dataset{% endblock %}
+
+{% block content %}
+<div class="upload-page">
+    <div class="upload-container">
+        <h1>Heat<span>Watch</span></h1>
+        <p class="subtitle">Historical Heat Index Analytics &amp; Prediction System for Metro Manila</p>
+
+        <!-- Upload Zone -->
+        <div class="upload-zone" id="uploadZone">
+            <p>Drag &amp; drop your CSV file here</p>
+            <span class="browse-btn" id="browseBtn">Browse File</span>
+            <p class="file-hint">Accepted format: .csv only</p>
+            <input type="file" id="fileInput" accept=".csv" style="display:none;">
+        </div>
+
+        <!-- Progress Steps -->
+        <div class="upload-progress" id="uploadProgress">
+            <div class="progress-step" id="step-parse">
+                <span class="spinner"></span>
+                <span class="check">&#10003;</span>
+                <span>Parsing CSV file...</span>
+            </div>
+            <div class="progress-step" id="step-clean">
+                <span class="spinner"></span>
+                <span class="check">&#10003;</span>
+                <span>Running preprocessing pipeline...</span>
+            </div>
+            <div class="progress-step" id="step-compute">
+                <span class="spinner"></span>
+                <span class="check">&#10003;</span>
+                <span>Computing heat index &amp; classifications...</span>
+            </div>
+            <div class="progress-step" id="step-train">
+                <span class="spinner"></span>
+                <span class="check">&#10003;</span>
+                <span>Training prediction model...</span>
+            </div>
+            <div class="progress-step" id="step-done">
+                <span class="spinner"></span>
+                <span class="check">&#10003;</span>
+                <span>Complete - loading dashboard...</span>
+            </div>
+        </div>
+
+        <!-- Cleaning Summary -->
+        <div class="cleaning-summary" id="cleaningSummary">
+            <h4>Preprocessing Complete</h4>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <span class="label">Rows before cleaning</span>
+                    <span class="value" id="sumRowsBefore">-</span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">Rows after cleaning</span>
+                    <span class="value" id="sumRowsAfter">-</span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">Duplicates removed</span>
+                    <span class="value" id="sumDuplicates">-</span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">Missing values imputed</span>
+                    <span class="value" id="sumMissing">-</span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">Outliers flagged</span>
+                    <span class="value" id="sumOutliers">-</span>
+                </div>
+            </div>
+            <div style="margin-top: 1.5rem; text-align: center;">
+                <button id="proceedBtn" class="proceed-btn">Proceed to Dashboard</button>
+            </div>
+        </div>
+
+        <!-- Error -->
+        <div class="upload-error" id="uploadError"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const zone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const browseBtn = document.getElementById('browseBtn');
+    const progress = document.getElementById('uploadProgress');
+    const summary = document.getElementById('cleaningSummary');
+    const errorBox = document.getElementById('uploadError');
+
+    browseBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        fileInput.click();
+    });
+    zone.addEventListener('click', function() { fileInput.click(); });
+
+    zone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        zone.classList.add('drag-over');
+    });
+    zone.addEventListener('dragleave', function() { zone.classList.remove('drag-over'); });
+    zone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length > 0) {
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', function() {
+        if (fileInput.files.length > 0) {
+            handleFile(fileInput.files[0]);
+        }
+    });
+
+    function handleFile(file) {
+        if (!file.name.toLowerCase().endsWith('.csv')) {
+            showError('Only .csv files are accepted. Please upload a valid CSV file.');
+            return;
+        }
+
+        errorBox.classList.remove('active');
+        zone.style.display = 'none';
+        progress.classList.add('active');
+
+        var steps = ['step-parse', 'step-clean', 'step-compute', 'step-train', 'step-done'];
+        var currentStep = 0;
+
+        function advanceStep() {
+            if (currentStep > 0) {
+                document.getElementById(steps[currentStep - 1]).classList.remove('active');
+                document.getElementById(steps[currentStep - 1]).classList.add('done');
+            }
+            if (currentStep < steps.length) {
+                document.getElementById(steps[currentStep]).classList.add('active');
+                currentStep++;
+            }
+        }
+
+        advanceStep();
+
+        var formData = new FormData();
+        formData.append('file', file);
+
+        var stepInterval = setInterval(advanceStep, 800);
+
+        fetch('/upload', {
+            method: 'POST',
+            body: formData,
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            clearInterval(stepInterval);
+
+            if (data.error) {
+                progress.classList.remove('active');
+                zone.style.display = '';
+                showError(data.error);
+                return;
+            }
+
+            steps.forEach(function(s) {
+                document.getElementById(s).classList.remove('active');
+                document.getElementById(s).classList.add('done');
+            });
+
+            if (data.summary) {
+                document.getElementById('sumRowsBefore').textContent = data.summary.rows_before;
+                document.getElementById('sumRowsAfter').textContent = data.summary.rows_after;
+                document.getElementById('sumDuplicates').textContent = data.summary.duplicates_removed;
+                document.getElementById('sumMissing').textContent = data.summary.missing_values_imputed;
+                document.getElementById('sumOutliers').textContent = data.summary.outliers_flagged;
+                summary.classList.add('active');
+            }
+
+            document.getElementById('proceedBtn').addEventListener('click', function() {
+                window.location.href = data.redirect;
+            });
+        })
+        .catch(function(err) {
+            clearInterval(stepInterval);
+            progress.classList.remove('active');
+            zone.style.display = '';
+            showError('Network error: ' + err.message);
+        });
+    }
+
+    function showError(msg) {
+        errorBox.textContent = msg;
+        errorBox.classList.add('active');
+    }
+});
+</script>
+{% endblock %}

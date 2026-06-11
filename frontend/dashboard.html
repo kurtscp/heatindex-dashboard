@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% block title %}HeatWatch - Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1>Main Dashboard</h1>
+        <p>Overview of Metro Manila's heat index analytics for the dataset period</p>
+    </div>
+
+    <!-- Metric Summary Cards -->
+    <div class="metrics-row">
+        <div class="metric-card" id="card-avg-hi">
+            <div class="metric-label">Average Heat Index ({{ metrics.avg_hi.year }})</div>
+            <div class="metric-value">{{ metrics.avg_hi.value }}</div>
+            <div class="metric-subtitle">
+                {% if '+' in metrics.avg_hi.subtitle %}
+                <span class="up">{{ metrics.avg_hi.subtitle }}</span>
+                {% else %}
+                <span class="down">{{ metrics.avg_hi.subtitle }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="metric-card" id="card-danger-days">
+            <div class="metric-label">Total Danger Days ({{ metrics.danger_days.year }})</div>
+            <div class="metric-value">{{ metrics.danger_days.value }}</div>
+            <div class="metric-subtitle">
+                {% if '+' in metrics.danger_days.subtitle %}
+                <span class="up">{{ metrics.danger_days.subtitle }}</span>
+                {% else %}
+                <span class="down">{{ metrics.danger_days.subtitle }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="metric-card" id="card-peak-hi">
+            <div class="metric-label">Peak Heat Index</div>
+            <div class="metric-value">{{ metrics.peak_hi.value }}</div>
+            <div class="metric-subtitle">{{ metrics.peak_hi.subtitle }}</div>
+        </div>
+        <div class="metric-card" id="card-riskiest-month">
+            <div class="metric-label">Riskiest Month</div>
+            <div class="metric-value">{{ metrics.riskiest_month.value }}</div>
+            <div class="metric-subtitle">{{ metrics.riskiest_month.subtitle }}</div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="charts-row">
+        <!-- Chart 1: Danger Days Per Year (left) -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <span class="chart-title">Danger Days Per Year</span>
+            </div>
+            <div id="chartDangerDays" style="width:100%; height:350px;"></div>
+        </div>
+
+        <!-- Chart 2: Dual-Line Monthly Comparison (right) -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <span class="chart-title">Monthly Heat Index Comparison</span>
+                <div class="chart-controls">
+                    <label>Base:</label>
+                    <select id="selectYear1">
+                        {% for y in years %}
+                        <option value="{{ y }}" {% if y == default_year1 %}selected{% endif %}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                    <label>Compare:</label>
+                    <select id="selectYear2">
+                        {% for y in years %}
+                        <option value="{{ y }}" {% if y == default_year2 %}selected{% endif %}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div id="chartMonthlyComparison" style="width:100%; height:350px;"></div>
+        </div>
+    </div>
+
+    <!-- Key Insights Panel -->
+    <div class="insights-panel">
+        <h3>Key Insights</h3>
+        <div class="insights-grid">
+            {% for insight in insights %}
+            <div class="insight-item">
+                <div class="insight-title">{{ insight.title }}</div>
+                <div class="insight-text">{{ insight.text }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var plotlyLayout = {
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { family: 'Inter, sans-serif', color: '#8b949e', size: 12 },
+        margin: { t: 20, r: 20, b: 70, l: 50 },
+        xaxis: { gridcolor: '#21262d', linecolor: '#30363d', zerolinecolor: '#30363d' },
+        yaxis: { gridcolor: '#21262d', linecolor: '#30363d', zerolinecolor: '#30363d' },
+        hoverlabel: { bgcolor: '#1c2128', bordercolor: '#30363d', font: { color: '#e6edf3', family: 'Inter, sans-serif' } },
+    };
+    var plotlyConfig = { responsive: true, displayModeBar: false };
+
+    // Chart 1: Danger Days Bar Chart
+    var dangerDays = {{ danger_days | safe }};
+
+    var elNinoDays = dangerDays.filter(function(d) { return d.el_nino === 1; });
+    var otherDays = dangerDays.filter(function(d) { return d.el_nino !== 1; });
+
+    var traceElNino = {
+        x: elNinoDays.map(function(d) { return d.year; }),
+        y: elNinoDays.map(function(d) { return d.danger_days; }),
+        type: 'bar',
+        name: 'El Ni\u00f1o',
+        marker: { color: '#f85149', cornerradius: 4 },
+        hovertemplate: '<b>%{x}</b><br>Danger Days: %{y}<br>ENSO: %{customdata}<extra></extra>',
+        customdata: elNinoDays.map(function(d) { return d.enso_condition; }),
+    };
+
+    var traceOther = {
+        x: otherDays.map(function(d) { return d.year; }),
+        y: otherDays.map(function(d) { return d.danger_days; }),
+        type: 'bar',
+        name: 'Other',
+        marker: { color: '#58a6ff', cornerradius: 4 },
+        hovertemplate: '<b>%{x}</b><br>Danger Days: %{y}<br>ENSO: %{customdata}<extra></extra>',
+        customdata: otherDays.map(function(d) { return d.enso_condition; }),
+    };
+
+    Plotly.newPlot('chartDangerDays', [traceElNino, traceOther], Object.assign({}, plotlyLayout, {
+        showlegend: true,
+        legend: { orientation: 'h', y: -0.25, x: 0.5, xanchor: 'center', font: { size: 11 } },
+        xaxis: Object.assign({}, plotlyLayout.xaxis, { dtick: 1, title: { text: 'Year', font: { size: 11 } } }),
+        yaxis: Object.assign({}, plotlyLayout.yaxis, { title: { text: 'Danger Days', font: { size: 11 } } }),
+    }), plotlyConfig);
+
+    // Chart 2: Monthly Comparison Dual-Line
+    function renderMonthlyChart(data) {
+        var line1 = {
+            x: data.months,
+            y: data.values1,
+            type: 'scatter',
+            mode: 'lines+markers',
+            name: String(data.year1),
+            line: { color: '#58a6ff', width: 2 },
+            marker: { size: 5 },
+            connectgaps: true,
+            hovertemplate: '<b>%{x} ' + data.year1 + '</b><br>Avg HI: %{y:.1f}\u00b0C<extra></extra>',
+        };
+
+        var line2 = {
+            x: data.months,
+            y: data.values2,
+            type: 'scatter',
+            mode: 'lines+markers',
+            name: String(data.year2),
+            line: { color: '#f85149', width: 2 },
+            marker: { size: 5 },
+            connectgaps: true,
+            hovertemplate: '<b>%{x} ' + data.year2 + '</b><br>Avg HI: %{y:.1f}\u00b0C<extra></extra>',
+        };
+
+        var threshold = {
+            x: data.months,
+            y: Array(12).fill(42),
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Danger (42\u00b0C)',
+            line: { color: '#da3633', width: 1.5, dash: 'dash' },
+            hoverinfo: 'skip',
+        };
+
+        Plotly.newPlot('chartMonthlyComparison', [line1, line2, threshold], Object.assign({}, plotlyLayout, {
+            showlegend: true,
+            legend: { orientation: 'h', y: -0.25, x: 0.5, xanchor: 'center', font: { size: 11 } },
+            xaxis: Object.assign({}, plotlyLayout.xaxis, { title: { text: 'Month', font: { size: 11 } } }),
+            yaxis: Object.assign({}, plotlyLayout.yaxis, { title: { text: 'Avg Heat Index (\u00b0C)', font: { size: 11 } } }),
+        }), plotlyConfig);
+    }
+
+    renderMonthlyChart({{ monthly | safe }});
+
+    document.getElementById('selectYear1').addEventListener('change', updateMonthlyChart);
+    document.getElementById('selectYear2').addEventListener('change', updateMonthlyChart);
+
+    function updateMonthlyChart() {
+        var y1 = document.getElementById('selectYear1').value;
+        var y2 = document.getElementById('selectYear2').value;
+        fetch('/api/monthly-comparison?year1=' + y1 + '&year2=' + y2)
+            .then(function(r) { return r.json(); })
+            .then(function(data) { renderMonthlyChart(data); });
+    }
+});
+</script>
+{% endblock %}
