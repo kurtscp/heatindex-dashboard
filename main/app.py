@@ -4,8 +4,13 @@ Main entry point with all routes for the Heat Index Analytics Dashboard.
 """
 
 import os
+import sys
 import json
 from flask import Flask, render_template, request, redirect, url_for, jsonify
+
+# Point to the root directory
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT_DIR)
 
 from backend.preprocessing import preprocess_csv
 from backend.analytics import (
@@ -22,7 +27,11 @@ from backend.analytics import (
 )
 from backend.predictor import HeatWatchPredictor
 
-app = Flask(__name__)
+# Resolve templates and static folder locations dynamically
+template_dir = os.path.join(ROOT_DIR, 'templates') if os.path.exists(os.path.join(ROOT_DIR, 'templates')) else os.path.join(ROOT_DIR, 'frontend')
+static_dir = os.path.join(ROOT_DIR, 'static') if os.path.exists(os.path.join(ROOT_DIR, 'static')) else os.path.join(ROOT_DIR, 'frontend', 'static')
+
+app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 app.secret_key = 'heatwatch-secret-key-2026'
 
 # Global state
