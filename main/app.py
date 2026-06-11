@@ -6,7 +6,7 @@ Main entry point with all routes for the Heat Index Analytics Dashboard.
 import os
 import sys
 import json
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify, make_response
 
 # Point to the root directory
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -92,6 +92,19 @@ def upload():
         import traceback
         traceback.print_exc()
         return jsonify({'error': f'Error processing file: {str(e)}'}), 500
+
+
+@app.route('/download-csv')
+def download_csv():
+    """Download the cleaned CSV file."""
+    if not is_data_loaded():
+        return redirect(url_for('index'))
+
+    csv_content = cleaned_data.to_csv(index=False)
+    response = make_response(csv_content)
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = 'attachment; filename=heatwatch_cleaned_data.csv'
+    return response
 
 
 @app.route('/reset')
