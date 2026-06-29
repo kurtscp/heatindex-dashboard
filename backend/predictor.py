@@ -1,7 +1,7 @@
 """
 HeatWatch - Predictor Module
 Decision Tree Classifier for danger category prediction
-and Linear Regression for heat index trend forecasting (PRD Section 3.5).
+and Linear Regression for heat index trend forecasting.
 """
 
 import numpy as np

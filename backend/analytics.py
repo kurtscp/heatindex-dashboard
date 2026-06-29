@@ -1,7 +1,6 @@
 """
 HeatWatch - Analytics Engine
-Computes all statistics, chart data, and auto-generated insights
-from the preprocessed dataset (PRD Sections 2.5, 2.6, 2.7).
+Computes statistics, chart data, and auto-generated insights from the preprocessed dataset.
 """
 
 import pandas as pd

@@ -1,7 +1,6 @@
 """
 HeatWatch - Data Preprocessing Pipeline
-Implements PRD Section 2.3: Full cleaning, transformation, and feature engineering
-for the Open-Meteo ERA5 raw CSV dataset.
+Cleaning, transformation, and feature engineering for the Open-Meteo ERA5 raw CSV dataset.
 """
 
 import pandas as pd
@@ -9,7 +8,7 @@ import numpy as np
 from io import StringIO
 
 
-# ENSO Year Reference (PRD Table 6)
+# ENSO condition per year (2015–2026)
 ENSO_MAP = {
     2015: "Neutral",
     2016: "El Nino",
