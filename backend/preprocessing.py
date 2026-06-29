@@ -183,7 +183,7 @@ def preprocess_csv(file_content):
     summary["outliers_flagged"] = int(outlier_mask.sum())
 
     # Step 8: Compute heat index (NOAA Rothfusz)
-    temp_col = 'temperature_2m_mean'
+    temp_col = 'temperature_2m_max'
     rh_col = 'relative_humidity_2m_max'
     
     hi_values = []

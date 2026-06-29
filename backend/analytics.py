@@ -122,85 +122,49 @@ def compute_key_insights(df):
     """Auto-generate the 4 key insights for the dashboard panel."""
     insights = []
 
-    # Insight 1: Danger day trend
-    yearly_danger = df.groupby('year')['is_danger_day'].sum()
-    if len(yearly_danger) >= 2:
-        last_complete_years = [y for y in yearly_danger.index if df[df['year'] == y]['month'].nunique() == 12]
-        if last_complete_years:
-            last_year = max(last_complete_years)
-        else:
-            last_year = yearly_danger.index.max()
-        last_val = yearly_danger[last_year]
-
-        # Find a meaningful base year (first year with danger days for % comparison)
-        first_year = yearly_danger.index.min()
-        first_val = yearly_danger[first_year]
-
-        if first_val > 0:
-            pct_increase = ((last_val - first_val) / first_val) * 100
-            insights.append({
-                "title": "Danger Days Surge",
-                "text": f"Danger-level days changed by {pct_increase:+.0f}% from {first_year} ({int(first_val)} days) to {last_year} ({int(last_val)} days).",
-            })
-        else:
-            # First year had 0 danger days — find the first year that did
-            years_with_danger = yearly_danger[yearly_danger > 0]
-            total_danger = int(yearly_danger.sum())
-            if len(years_with_danger) > 0:
-                first_danger_year = years_with_danger.index.min()
-                insights.append({
-                    "title": "Emerging Danger Trend",
-                    "text": f"No danger-level days were recorded in {first_year}, but {total_danger} total danger days have occurred since {first_danger_year} — with {int(last_val)} in {last_year} alone.",
-                })
-            else:
-                insights.append({
-                    "title": "Danger Days Summary",
-                    "text": f"No danger-level heat index days (≥42°C) have been recorded across the entire {first_year}–{last_year} dataset period.",
-                })
-
-    # Insight 2: Humidity correlation
-    corr = df['relative_humidity_2m_mean'].corr(df['computed_heat_index'])
-    r_squared = corr ** 2
+    # Insight 1: Highest Recorded Heat Index
+    peak_idx = df['computed_heat_index'].idxmax()
+    max_hi = df.loc[peak_idx, 'computed_heat_index']
+    peak_date = df.loc[peak_idx, 'time']
+    if hasattr(peak_date, 'strftime'):
+        max_date = peak_date.strftime('%B %d, %Y')
+    else:
+        max_date = str(peak_date)
+        
     insights.append({
-        "title": "Humidity Drives Heat Danger",
-        "text": f"Relative humidity explains {r_squared * 100:.0f}% of heat index variance (Pearson r = {corr:.2f}), confirming humidity as the primary driver.",
+        "title": "Highest Heat Index",
+        "text": f"The maximum recorded heat index was {max_hi:.1f}°C, which occurred on {max_date}.",
     })
 
-    # Insight 3: El Nino impact
-    enso_danger = df.groupby('enso_condition')['is_danger_day'].mean() * 365
-    el_nino_avg = enso_danger.get('El Nino', 0)
-    neutral_avg = enso_danger.get('Neutral', 0)
-    la_nina_avg = enso_danger.get('La Nina', 0)
-    if neutral_avg > 0 and el_nino_avg > 0:
-        multiplier = el_nino_avg / neutral_avg
+    # Insight 2: Total Danger Days
+    total_danger_days = int(df['is_danger_day'].sum())
+    first_year = df['year'].min()
+    last_year = df['year'].max()
+    insights.append({
+        "title": "Total Danger Days",
+        "text": f"There have been {total_danger_days} days where the heat index reached the danger level (≥42°C) between {first_year} and {last_year}.",
+    })
+
+    # Insight 3: Average Heat Gap
+    avg_gap = df['hi_gap'].mean()
+    insights.append({
+        "title": "Average Heat Gap",
+        "text": f"On average, high humidity makes the perceived heat index {avg_gap:.1f}°C hotter than the actual measured temperature.",
+    })
+
+    # Insight 4: Highest Danger Year
+    yearly_danger = df.groupby('year')['is_danger_day'].sum()
+    if not yearly_danger.empty and yearly_danger.max() > 0:
+        worst_year = yearly_danger.idxmax()
+        worst_count = int(yearly_danger.max())
         insights.append({
-            "title": "El Niño Amplification",
-            "text": f"El Niño years produce {multiplier:.1f}x more danger days on average compared to neutral years ({el_nino_avg:.0f} vs {neutral_avg:.0f} projected annual days).",
-        })
-    elif el_nino_avg > 0:
-        insights.append({
-            "title": "El Niño Impact",
-            "text": f"El Niño years average {el_nino_avg:.0f} projected danger days per year, while neutral years show minimal danger-level events.",
+            "title": "Highest Danger Year",
+            "text": f"The year {worst_year} experienced the most extreme heat, with a total of {worst_count} recorded danger days.",
         })
     else:
-        # Compare average HI by ENSO condition instead
-        enso_hi = df.groupby('enso_condition')['computed_heat_index'].mean()
-        el_nino_hi = enso_hi.get('El Nino', 0)
-        neutral_hi = enso_hi.get('Neutral', 0)
-        diff = el_nino_hi - neutral_hi
         insights.append({
-            "title": "El Niño Effect",
-            "text": f"El Niño years average {el_nino_hi:.1f}°C heat index vs {neutral_hi:.1f}°C in neutral years ({diff:+.1f}°C difference).",
-        })
-
-    # Insight 4: Hidden heat gap widening
-    yearly_gap = df.groupby('year')['hi_gap'].mean()
-    if len(yearly_gap) >= 2:
-        first_gap = yearly_gap.iloc[0]
-        last_gap = yearly_gap.iloc[-1]
-        insights.append({
-            "title": "Hidden Heat Effect Grows",
-            "text": f"The heat gap (humidity premium) widened from {first_gap:.1f}\u00b0C in {yearly_gap.index[0]} to {last_gap:.1f}\u00b0C in {yearly_gap.index[-1]}, meaning perceived heat rises faster than measured temperature.",
+            "title": "No Danger Years",
+            "text": "There are no years in the current dataset that recorded danger-level heat index days.",
         })
 
     return insights

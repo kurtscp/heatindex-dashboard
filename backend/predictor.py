@@ -22,6 +22,7 @@ class HeatWatchPredictor:
         self.category_order = ['Normal', 'Caution', 'Extreme Caution', 'Danger', 'Extreme Danger']
         self.is_trained = False
         self.forecast_data = None
+        self.historical_hi_lookup = {}
 
     def train(self, df):
         """Train both models on the cleaned dataset."""
@@ -57,9 +58,13 @@ class HeatWatchPredictor:
         self.regressor = LinearRegression()
         self.regressor.fit(X_reg, y_reg)
 
-        # Store historical data for forecast chart
         self.historical_years = yearly['year'].tolist()
         self.historical_avg_hi = [round(v, 2) for v in yearly['avg_hi'].tolist()]
+
+        # Build historical lookup table for Month + ENSO based on actual data
+        lookup_df = train_df.groupby(['month', 'enso_condition'])['computed_heat_index'].mean().reset_index()
+        for _, row in lookup_df.iterrows():
+            self.historical_hi_lookup[(int(row['month']), row['enso_condition'])] = row['computed_heat_index']
 
         # Compute forecast through 2028
         forecast_years = list(range(int(yearly['year'].min()), 2029))
@@ -78,6 +83,8 @@ class HeatWatchPredictor:
             'slope': round(float(self.regressor.coef_[0]), 4),
             'historical_end_year': int(yearly['year'].max()),
         }
+        
+        self.historical_end_year = int(yearly['year'].max())
 
         # Find projected year when average crosses 42 degrees C
         crossing_year = None
@@ -113,15 +120,19 @@ class HeatWatchPredictor:
         probabilities = self.classifier.predict_proba(features)[0]
         max_prob = float(max(probabilities)) * 100
 
-        # Predict heat index using regression (approximate)
-        predicted_hi = float(self.regressor.predict(np.array([[year]]))[0])
-        # Adjust by month seasonality (rough monthly multiplier)
-        month_factors = {
-            1: 0.85, 2: 0.90, 3: 0.98, 4: 1.10, 5: 1.15,
-            6: 1.05, 7: 1.00, 8: 0.98, 9: 0.95, 10: 0.92,
-            11: 0.88, 12: 0.85
-        }
-        predicted_hi *= month_factors.get(month, 1.0)
+        # Predict heat index using historical lookup based on Month and ENSO condition
+        # If the exact combo isn't in historical data, fallback to month average, then general average
+        exact_match = self.historical_hi_lookup.get((month, enso_condition))
+        if exact_match is not None:
+            base_hi = exact_match
+        else:
+            # Fallback to month average across all conditions if specific ENSO condition missing
+            month_matches = [v for k, v in self.historical_hi_lookup.items() if k[0] == month]
+            base_hi = sum(month_matches) / len(month_matches) if month_matches else 35.0
+            
+        # Add a slight trend factor based on the regression slope
+        trend_adjustment = float(self.regressor.coef_[0]) * (year - self.historical_end_year)
+        predicted_hi = base_hi + max(0, trend_adjustment) # only apply upward trend
 
         # Health advisory based on category
         advisories = {
@@ -166,7 +177,7 @@ class HeatWatchPredictor:
             },
             {
                 'title': 'Public Health',
-                'text': f'Pre-position heat stroke response resources before peak danger weeks each year. {"Projected to cross 42\u00b0C average by " + str(crossing) if crossing else "Trend continues to rise"}. High-density, low-green-cover barangays should be prioritized.',
-                'stat': f'Projected 42\u00b0C avg: {crossing if crossing else "Beyond 2028"}',
+                'text': f'Ensure hospitals and clinics are ready with heat stroke supplies before the hottest weeks of the year. {"The average heat index is expected to reach the 42°C danger level by " + str(crossing) if crossing else "The heat trend is still going up"}. Focus on crowded neighborhoods with few trees or parks.',
+                'stat': f'Projected 42°C avg: {crossing if crossing else "Beyond 2028"}',
             },
         ]
