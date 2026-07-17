@@ -1,0 +1,8 @@
+#Assets
+assets/
+
+#Data
+rawData/heatwatch_cleaned_data.csv
+rawData/HeatWatch_PRD.docx
+rawData/open-meteo-14.59N121.00E9m.csv
+rawData/super-raw-datset.csv
