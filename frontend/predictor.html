@@ -5,7 +5,7 @@
 <div class="page-container">
     <div class="page-header">
         <h1>Danger Level Predictor</h1>
-        <p>Machine learning-backed forecasting for Metro Manila heat danger</p>
+        <p>Machine learning-backed forecasting for heat danger levels</p>
     </div>
 
     <!-- Predictor Form -->
@@ -40,9 +40,7 @@
             <div class="form-group">
                 <label for="predYear">Year</label>
                 <select id="predYear">
-                    <option value="2026">2026</option>
-                    <option value="2027" selected>2027</option>
-                    <option value="2028">2028</option>
+                    <!-- Populated dynamically from forecast data -->
                 </select>
             </div>
             <div class="form-group">
@@ -75,24 +73,11 @@
     <!-- Forecast Trend Chart -->
     <div class="chart-container" style="margin-bottom:1.5rem;">
         <div class="chart-header">
-            <span class="chart-title">Heat Index Forecast Trend (2015-2028)</span>
+            <span class="chart-title">Heat Index Forecast Trend</span>
         </div>
         <div id="chartForecast" style="width:100%; height:380px;"></div>
     </div>
 
-    <!-- Recommendations -->
-    <div class="page-header" style="margin-top:0.5rem;">
-        <h3 style="font-size:0.95rem; font-weight:600;">Data-Backed Recommendations</h3>
-    </div>
-    <div class="recommendations-grid">
-        {% for rec in recommendations %}
-        <div class="rec-card">
-            <div class="rec-title">{{ rec.title }}</div>
-            <div class="rec-text">{{ rec.text }}</div>
-            <span class="rec-stat">{{ rec.stat }}</span>
-        </div>
-        {% endfor %}
-    </div>
 </div>
 {% endblock %}
 
@@ -115,6 +100,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (forecast) {
         var histEnd = forecast.historical_end_year;
+
+        // Dynamically populate the year dropdown with forecast years
+        var predYearSelect = document.getElementById('predYear');
+        var futureYears = forecast.years.filter(function(y) { return y > histEnd; });
+        if (futureYears.length === 0) futureYears = [histEnd];
+        futureYears.forEach(function(y, i) {
+            var opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y;
+            if (i === Math.floor(futureYears.length / 2)) opt.selected = true;
+            predYearSelect.appendChild(opt);
+        });
 
         var histYears = forecast.years.filter(function(y) { return y <= histEnd; });
         var histValues = histYears.map(function(y) { return forecast.values[forecast.years.indexOf(y)]; });

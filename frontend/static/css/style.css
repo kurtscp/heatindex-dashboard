@@ -274,6 +274,8 @@ a:hover { color: #79c0ff; }
 
 /* Footer */
 .hw-footer { border-top: 1px solid var(--border-default); padding: 1.5rem 0; text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: 2rem; }
+.hw-footer .footer-link { color: var(--text-muted); text-decoration: none; transition: color var(--transition), text-shadow var(--transition); }
+.hw-footer .footer-link:hover { color: var(--color-accent); text-shadow: 0 0 8px rgba(88, 166, 255, 0.3); }
 
 /* Plotly overrides */
 .js-plotly-plot .plotly .modebar { top: 5px !important; right: 5px !important; }

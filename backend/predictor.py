@@ -66,8 +66,9 @@ class HeatWatchPredictor:
         for _, row in lookup_df.iterrows():
             self.historical_hi_lookup[(int(row['month']), row['enso_condition'])] = row['computed_heat_index']
 
-        # Compute forecast through 2028
-        forecast_years = list(range(int(yearly['year'].min()), 2029))
+        # Compute forecast extending 3 years beyond the data
+        forecast_end = int(yearly['year'].max()) + 3
+        forecast_years = list(range(int(yearly['year'].min()), forecast_end + 1))
         forecast_values = self.regressor.predict(np.array(forecast_years).reshape(-1, 1))
 
         # Compute confidence interval using residuals

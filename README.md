@@ -1,6 +1,6 @@
-# HeatWatch — Metro Manila Heat Index Dashboard
+# HeatWatch — Philippines Heat Index Dashboard
 
-Flask-based web app for analyzing, visualizing, and predicting heat index patterns for Metro Manila using Open-Meteo ERA5 data.
+Flask-based web app for analyzing, visualizing, and predicting heat index patterns for the Philippines using CSV datasets.
 
 ## Quick Start
 
@@ -65,7 +65,7 @@ Open `http://127.0.0.1:5000/` → upload the dataset at `rawData/raw_manila_heat
 | **Dashboard** | Metric cards, danger days bar chart, monthly HI comparison, key insights |
 | **Historical** | Annual HI trend, earliest danger day per year, hidden heat gap |
 | **Calendar** | Year × month heatmap of peak danger category per period |
-| **Predictor** | Date + ENSO → danger category prediction; linear regression forecast to 2028 |
+| **Predictor** | Date + ENSO → danger category prediction; linear regression forecast |
 
 ## API Endpoints
 

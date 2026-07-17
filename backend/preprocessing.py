@@ -1,6 +1,6 @@
 """
 HeatWatch - Data Preprocessing Pipeline
-Cleaning, transformation, and feature engineering for the Open-Meteo ERA5 raw CSV dataset.
+Cleaning, transformation, and feature engineering for heat index CSV datasets.
 """
 
 import pandas as pd
@@ -94,7 +94,7 @@ def get_season(month):
 
 def preprocess_csv(file_content):
     """
-    Full preprocessing pipeline for the raw Open-Meteo CSV.
+    Full preprocessing pipeline for the uploaded CSV.
     
     Args:
         file_content: string content of the uploaded CSV file
