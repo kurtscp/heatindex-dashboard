@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/favicon/android-chrome-512x512.png" alt="HeatWatch Logo" width="128" height="128">
+  <img src="./assets/favicon/android-chrome-512x512.png" alt="HeatWatch Logo" width="128" height="128">
 
   <h1>HeatWatch</h1>
   <p><strong>Philippines Heat Index Dashboard</strong></p>
