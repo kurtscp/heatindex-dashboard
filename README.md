@@ -1,6 +1,6 @@
-<div align="center">
-  <img src="./assets/favicon/android-chrome-512x512.png" alt="HeatWatch Logo" width="128" height="128">
+![HeatWatch Banner](https://capsule-render.vercel.app/api?type=rect&color=0:da3633,100:e3872d&height=12)
 
+<div align="center">
   <h1>HeatWatch</h1>
   <p><strong>Philippines Heat Index Dashboard</strong></p>
 
