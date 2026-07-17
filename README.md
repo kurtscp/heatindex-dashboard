@@ -28,7 +28,7 @@
 - **Historical Trends** — Annual average heat index trend with linear regression, earliest danger day per year, and temperature vs. heat index gap analysis.
 - **Danger Calendar** — Year × month heatmap showing peak danger severity, plus a ranked table of the top 5 historically most dangerous weeks.
 - **ML Predictor** — Decision Tree classifier for danger level prediction given any date + ENSO condition, plus a linear regression forecast with 95% confidence intervals.
-- **Automated Preprocessing** — Handles metadata headers, duplicate removal, missing value imputation (linear interpolation), outlier flagging, and ENSO tagging — all before you see a single chart.
+- **Automated Preprocessing** — Handles metadata headers, duplicate removal, missing value imputation (linear interpolation), outlier flagging, and ENSO tagging before populating in the dashboard.
 - **Export** — Download the cleaned, feature-engineered CSV for your own analysis.
 
 ---
