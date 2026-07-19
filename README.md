@@ -21,6 +21,8 @@
 
 > [!NOTE]
 > HeatWatch is data-source agnostic. While it was initially developed with [Open-Meteo ERA5](https://open-meteo.com/) exports, it works with **any CSV** that follows the required column format described [below](#-csv-data-format).
+> 
+>To test, download the [sample csv](./rawData/raw_manila_heatindex_2015_2026.csv) and load it in the dashboard.
 
 ## ✨ Key Features
 
