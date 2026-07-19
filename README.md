@@ -1,15 +1,15 @@
-<div align="center">
-  <img src="assets/favicon/android-chrome-512x512.png" alt="HeatWatch Logo" width="128" height="128">
+![HeatWatch Banner](https://capsule-render.vercel.app/api?type=rect&color=0:da3633,100:e3872d&height=12)
 
+<div align="center">
   <h1>HeatWatch</h1>
   <p><strong>Philippines Heat Index Dashboard</strong></p>
 
   <p>
-    <a href="#quick-start">View Dashboard</a>
+    <a href="https://heatindex-dashboard.onrender.com">View Dashboard</a>
     ·
-    <a href="https://github.com/your-username/heatwatch/issues">Report Bug</a>
+    <a href="https://github.com/kurtscp/heatindex-dashboard/issues">Report Bug</a>
     ·
-    <a href="https://github.com/your-username/heatwatch/issues">Request Feature</a>
+    <a href="https://github.com/kurtscp/heatindex-dashboard/issues">Request Feature</a>
   </p>
 </div>
 
@@ -17,19 +17,19 @@
 
 ## About
 
-**HeatWatch** is a Flask-based web application for analyzing, visualizing, and predicting historical heat index data across the Philippines. Upload any CSV dataset with daily weather observations — the system automatically cleans the data, computes heat index using the **PAGASA-adopted Rothfusz regression**, classifies danger levels, trains a machine learning predictor, and generates a full interactive analytics dashboard.
+**HeatWatch** is a Flask-based web application for analyzing, visualizing, and predicting historical heat index data across the Philippines. Upload any CSV dataset with daily weather observations and the system automatically cleans the data, computes heat index using the **PAGASA-adopted Rothfusz regression**, classifies danger levels, trains a machine learning predictor, and generates a full interactive analytics dashboard.
 
 > [!NOTE]
-> HeatWatch is data-source agnostic. While it was initially developed with [Open-Meteo ERA5](https://open-meteo.com/) exports, it works with **any CSV** that follows the required column format described below.
+> HeatWatch is data-source agnostic. While it was initially developed with [Open-Meteo ERA5](https://open-meteo.com/) exports, it works with **any CSV** that follows the required column format described [below](#-csv-data-format).
 
 ## ✨ Key Features
 
-- 📊 **Interactive Dashboard** — Metric cards, danger day bar charts, and year-over-year monthly heat index comparison with dynamic selectors.
-- 📈 **Historical Trends** — Annual average heat index trend with linear regression, earliest danger day per year, and temperature vs. heat index gap analysis.
-- 🗓️ **Danger Calendar** — Year × month heatmap showing peak danger severity, plus a ranked table of the top 5 historically most dangerous weeks.
-- 🤖 **ML Predictor** — Decision Tree classifier for danger level prediction given any date + ENSO condition, plus a linear regression forecast with 95% confidence intervals.
-- 🧹 **Automated Preprocessing** — Handles metadata headers, duplicate removal, missing value imputation (linear interpolation), outlier flagging, and ENSO tagging — all before you see a single chart.
-- 📥 **Export** — Download the cleaned, feature-engineered CSV for your own analysis.
+- **Interactive Dashboard** — Metric cards, danger day bar charts, and year-over-year monthly heat index comparison with dynamic selectors.
+- **Historical Trends** — Annual average heat index trend with linear regression, earliest danger day per year, and temperature vs. heat index gap analysis.
+- **Danger Calendar** — Year × month heatmap showing peak danger severity, plus a ranked table of the top 5 historically most dangerous weeks.
+- **ML Predictor** — Decision Tree classifier for danger level prediction given any date + ENSO condition, plus a linear regression forecast with 95% confidence intervals.
+- **Automated Preprocessing** — Handles metadata headers, duplicate removal, missing value imputation (linear interpolation), outlier flagging, and ENSO tagging before populating in the dashboard.
+- **Export** — Download the cleaned, feature-engineered CSV for your own analysis.
 
 ---
 
@@ -37,7 +37,7 @@
 
 ### Heat Index Calculation
 
-HeatWatch uses the **NOAA Rothfusz regression equation** — the same algorithm officially adopted by **PAGASA** (Philippine Atmospheric, Geophysical, and Astronomical Services Administration).
+HeatWatch uses the **NOAA Rothfusz regression equation**. The same algorithm officially adopted by **PAGASA** (Philippine Atmospheric, Geophysical, and Astronomical Services Administration).
 
 **Step 1:** Convert temperature from Celsius to Fahrenheit.
 
@@ -110,9 +110,9 @@ latitude,longitude,elevation,utc_offset_seconds,timezone,timezone_abbreviation
 14.586995,121.002785,9.0,0,GMT,GMT
 
 time,temperature_2m_mean (°C),temperature_2m_max (°C),temperature_2m_min (°C),precipitation_sum (mm),relative_humidity_2m_max (%),relative_humidity_2m_mean (%),wind_speed_10m_max (km/h)
-2024-01-01,25.2,29.5,21.8,0.0,71.3,71.0,18.1
-2024-01-02,25.5,30.4,22.7,0.1,70.6,71.8,15.3
-2024-01-03,25.9,29.6,22.5,0.0,71.8,72.6,11.1
+2026-01-01,25.2,29.5,21.8,0.0,71.3,71.0,18.1
+2026-01-02,25.5,30.4,22.7,0.1,70.6,71.8,15.3
+2026-01-03,25.9,29.6,22.5,0.0,71.8,72.6,11.1
 ```
 
 > [!TIP]
